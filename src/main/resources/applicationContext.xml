@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+
+    <!-- 配置传入环境变量-->
+    <bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer" />
+
+    <!--从环境变量配置数据源-->
+    <bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+        <property name="driverClassName" value="${driverClassName}"/>
+        <property name="url" value="${url}" />
+        <property name="username" value="${username}"/>
+        <property name="password" value="${password}"/>
+    </bean>
+
+    <!--&lt;!&ndash;从db配置文件中配置数据源&ndash;&gt;-->
+    <!--<bean id="propertyConfigurer"  class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">-->
+    <!--<property name="location" value="classpath:db.properties" />-->
+    <!--</bean>-->
+    <!--<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">-->
+        <!--<property name="driverClassName" value="${driverClassName}"/>-->
+        <!--<property name="url" value="${url}" />-->
+        <!--<property name="username" value="${username}"/>-->
+        <!--<property name="password" value="${password}"/>-->
+    <!--</bean>-->
+
+    <!--配置sqlsession工厂-->
+    <!--引用mybatis配置文件-->
+    <bean id="sqlSessionFactory"
+          class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"></property>
+        <property name="mapperLocations" value="classpath:mapper/*.xml"></property>
+        <!--<property name="configLocation" value="classpath:applicationContext-mybatis.xml"></property>-->
+    </bean>
+    <!--扫描需代理的接口-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.hand.infra.mapper"></property>
+    </bean>
+
+    <!--事务管理器-->
+    <bean name="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+    <!-- 事务相关控制配置-->
+    <tx:advice id="iccardTxAdvice" transaction-manager="transactionManager">
+        <tx:attributes>
+            <tx:method name="add*" propagation="REQUIRED" read-only="false" rollback-for="java.lang.Exception" no-rollback-for="java.lang.RuntimeException"/>
+            <tx:method name="*" propagation="REQUIRED" />
+        </tx:attributes>
+    </tx:advice>
+
+    <!-- 把事务控制在service层 -->
+    <aop:config>
+        <aop:pointcut id="iccardTerm" expression="execution(public * com.hand.api.service.impl.*.*(..))" />
+        <aop:advisor pointcut-ref="iccardTerm" advice-ref="iccardTxAdvice" />
+    </aop:config>
+
+    <!--配置业务层bean-->
+    <bean id="filmService" class="com.hand.api.service.impl.FilmServiceImpl">
+        <property name="fm" ref="filmMapper"></property>
+    </bean>
+
+    <bean id="filmServiceRollBack" class="com.hand.api.service.impl.FilmServiceRollBack">
+        <property name="fm" ref="filmMapper"></property>
+    </bean>
+
+    <bean id="afterEventListener" class="com.hand.domain.Listener.AfterEventListener">
+
+    </bean>
+    <bean id="beforeEventListener" class="com.hand.domain.Listener.BeforeEventListener">
+
+    </bean>
+</beans>
